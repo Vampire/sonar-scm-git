@@ -25,8 +25,9 @@ import org.sonar.api.utils.Version;
 public final class GitPlugin implements Plugin {
   @Override
   public void define(Context context) {
+    GitUtils.determineGitExecutable(context.getBootConfiguration());
     context.addExtensions(
-      JGitBlameCommand.class,
+      GitBlameCommand.class,
       AnalysisWarningsSupport.getAnalysisWarningsWrapper(context.getRuntime()));
     if (context.getRuntime().getApiVersion().isGreaterThanOrEqual(Version.create(7, 7))) {
       context.addExtensions(GitScmProvider.class,

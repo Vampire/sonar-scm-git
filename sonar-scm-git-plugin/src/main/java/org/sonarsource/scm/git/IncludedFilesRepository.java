@@ -19,15 +19,12 @@
  */
 package org.sonarsource.scm.git;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.treewalk.FileTreeIterator;
-import org.eclipse.jgit.treewalk.TreeWalk;
-import org.eclipse.jgit.treewalk.WorkingTreeIterator;
-import org.eclipse.jgit.treewalk.filter.PathFilterGroup;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
@@ -36,7 +33,7 @@ public class IncludedFilesRepository {
   private static final Logger LOG = Loggers.get(IncludedFilesRepository.class);
   private final Set<Path> includedFiles = new HashSet<>();
 
-  public IncludedFilesRepository(Path baseDir) throws IOException {
+  public IncludedFilesRepository(Path baseDir) {
     indexFiles(baseDir);
     LOG.debug("{} non excluded files in this Git repository", includedFiles.size());
   }
@@ -45,28 +42,17 @@ public class IncludedFilesRepository {
     return includedFiles.contains(absolutePath);
   }
 
-  private void indexFiles(Path baseDir) throws IOException {
-    try (Repository repo = JGitUtils.buildRepository(baseDir)) {
-      Path workTreeRoot = repo.getWorkTree().toPath();
-      FileTreeIterator workingTreeIt = new FileTreeIterator(repo);
-      try (TreeWalk treeWalk = new TreeWalk(repo)) {
-        treeWalk.setRecursive(true);
-        if (!baseDir.equals(workTreeRoot)) {
-          Path relativeBaseDir = workTreeRoot.relativize(baseDir);
-          treeWalk.setFilter(PathFilterGroup.createFromStrings(relativeBaseDir.toString().replace('\\', '/')));
-        }
-        treeWalk.addTree(workingTreeIt);
-        while (treeWalk.next()) {
-
-          WorkingTreeIterator workingTreeIterator = treeWalk
-            .getTree(0, WorkingTreeIterator.class);
-
-          if (!workingTreeIterator.isEntryIgnored()) {
-            includedFiles.add(workTreeRoot.resolve(treeWalk.getPathString()));
-          }
-        }
+  private void indexFiles(Path baseDir) {
+    try {
+      Process gitLsFiles = GitUtils.getVerifiedProcessBuilder(baseDir).command(GitUtils.getGitExecutable(), "ls-files", "-c", "-o", "--exclude-standard").start();
+      try (BufferedReader stdout = new BufferedReader(new InputStreamReader(gitLsFiles.getInputStream()))) {
+        stdout.lines().map(baseDir::resolve).forEach(includedFiles::add);
       }
+      gitLsFiles.waitFor();
+    } catch (IOException e) {
+      LOG.warn("Failed to invoke native git executable", e);
+    } catch (InterruptedException e) {
+      LOG.info("Git ls-files interrupted");
     }
   }
-
 }

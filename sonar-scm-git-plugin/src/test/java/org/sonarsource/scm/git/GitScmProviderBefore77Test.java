@@ -42,10 +42,12 @@ import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.internal.google.common.collect.ImmutableMap;
 import org.sonar.api.internal.google.common.collect.ImmutableSet;
 import org.sonar.api.scan.filesystem.PathResolver;
@@ -105,6 +107,11 @@ public class GitScmProviderBefore77Test {
   private Git git;
   private final AnalysisWarningsWrapper analysisWarnings = mock(AnalysisWarningsWrapper.class);
 
+  @BeforeClass
+  public static void determineGitExecutable() {
+    GitUtils.determineGitExecutable(mock(Configuration.class));
+  }
+
   @Before
   public void before() throws IOException, GitAPIException {
     worktree = temp.newFolder().toPath();
@@ -123,10 +130,10 @@ public class GitScmProviderBefore77Test {
 
   @Test
   public void returnImplem() {
-    JGitBlameCommand jblameCommand = new JGitBlameCommand(new PathResolver(), analysisWarnings);
-    GitScmProviderBefore77 gitScmProvider = new GitScmProviderBefore77(jblameCommand, analysisWarnings);
+    GitBlameCommand gitBlameCommand = new GitBlameCommand(new PathResolver(), analysisWarnings);
+    GitScmProviderBefore77 gitScmProvider = new GitScmProviderBefore77(gitBlameCommand, analysisWarnings);
 
-    assertThat(gitScmProvider.blameCommand()).isEqualTo(jblameCommand);
+    assertThat(gitScmProvider.blameCommand()).isEqualTo(gitBlameCommand);
   }
 
   @Test
@@ -140,8 +147,8 @@ public class GitScmProviderBefore77Test {
     assertThat(newScmProvider().supports(baseDir)).isTrue();
   }
 
-  private static JGitBlameCommand mockCommand() {
-    return mock(JGitBlameCommand.class);
+  private static GitBlameCommand mockCommand() {
+    return mock(GitBlameCommand.class);
   }
 
   @Test
@@ -311,114 +318,8 @@ public class GitScmProviderBefore77Test {
   }
 
   @Test
-  public void branchChangedFiles_should_return_null_on_io_errors_of_repo_builder() {
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      Repository buildRepo(Path basedir) throws IOException {
-        throw new IOException();
-      }
-    };
-    assertThat(provider.branchChangedFiles("branch", worktree)).isNull();
-    verifyZeroInteractions(analysisWarnings);
-  }
-
-  @Test
-  public void branchChangedFiles_should_return_null_if_repo_exactref_is_null() throws IOException {
-    Repository repository = mock(Repository.class);
-    RefDatabase refDatabase = mock(RefDatabase.class);
-    when(repository.getRefDatabase()).thenReturn(refDatabase);
-    when(refDatabase.getRef("branch")).thenReturn(null);
-
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      Repository buildRepo(Path basedir) throws IOException {
-        return repository;
-      }
-    };
-    assertThat(provider.branchChangedFiles("branch", worktree)).isNull();
-
-    String warning = "Could not find ref 'branch' in refs/heads or refs/remotes/origin."
-      + " You may see unexpected issues and changes. Please make sure to fetch this ref before pull request analysis.";
-    verify(analysisWarnings).addUnique(warning);
-  }
-
-  @Test
-  public void branchChangedFiles_should_return_null_on_io_errors_of_RevWalk() throws IOException {
-    RevWalk walk = mock(RevWalk.class);
-    when(walk.parseCommit(any())).thenThrow(new IOException());
-
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      RevWalk newRevWalk(Repository repo) {
-        return walk;
-      }
-    };
-    assertThat(provider.branchChangedFiles("branch", worktree)).isNull();
-  }
-
-  @Test
-  public void branchChangedFiles_should_return_null_on_git_api_errors() throws GitAPIException {
-    DiffCommand diffCommand = mock(DiffCommand.class);
-    when(diffCommand.setShowNameAndStatusOnly(anyBoolean())).thenReturn(diffCommand);
-    when(diffCommand.setOldTree(any())).thenReturn(diffCommand);
-    when(diffCommand.setNewTree(any())).thenReturn(diffCommand);
-    when(diffCommand.call()).thenThrow(mock(GitAPIException.class));
-
-    Git git = mock(Git.class);
-    when(git.diff()).thenReturn(diffCommand);
-
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      Git newGit(Repository repo) {
-        return git;
-      }
-    };
-    assertThat(provider.branchChangedFiles("master", worktree)).isNull();
-    verify(diffCommand).call();
-  }
-
-  @Test
   public void branchChangedLines_returns_null_when_branch_doesnt_exist() {
     assertThat(newScmProvider().branchChangedLines("nonexistent", worktree, emptySet())).isNull();
-  }
-
-  @Test
-  public void branchChangedLines_omits_files_with_git_api_errors() throws GitAPIException {
-    DiffEntry diffEntry = mock(DiffEntry.class);
-    when(diffEntry.getChangeType()).thenReturn(DiffEntry.ChangeType.MODIFY);
-
-    DiffCommand diffCommand = mock(DiffCommand.class);
-    when(diffCommand.setOutputStream(any())).thenReturn(diffCommand);
-    when(diffCommand.setOldTree(any())).thenReturn(diffCommand);
-    when(diffCommand.setPathFilter(any())).thenReturn(diffCommand);
-    when(diffCommand.call())
-      .thenReturn(Collections.singletonList(diffEntry))
-      .thenThrow(mock(GitAPIException.class));
-
-    Git git = mock(Git.class);
-    when(git.diff()).thenReturn(diffCommand);
-
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      Git newGit(Repository repo) {
-        return git;
-      }
-    };
-    assertThat(provider.branchChangedLines("master", worktree,
-      ImmutableSet.of(worktree.resolve("foo"), worktree.resolve("bar"))))
-        .isEqualTo(ImmutableMap.of(worktree.resolve("foo"), emptySet()));
-    verify(diffCommand, times(2)).call();
-  }
-
-  @Test
-  public void branchChangedLines_returns_null_on_io_errors_of_repo_builder() {
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      Repository buildRepo(Path basedir) throws IOException {
-        throw new IOException();
-      }
-    };
-    assertThat(provider.branchChangedLines("branch", worktree, emptySet())).isNull();
   }
 
   @Test
@@ -427,7 +328,7 @@ public class GitScmProviderBefore77Test {
   }
 
   private GitScmProviderBefore77 newGitScmProvider() {
-    return new GitScmProviderBefore77(mock(JGitBlameCommand.class), analysisWarnings);
+    return new GitScmProviderBefore77(mock(GitBlameCommand.class), analysisWarnings);
   }
 
   @Test

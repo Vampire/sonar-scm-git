@@ -42,7 +42,7 @@ class ChangedLinesComputer {
   };
 
   /**
-   * The OutputStream to pass to JGit's diff command.
+   * The OutputStream to pass to diff command.
    */
   OutputStream receiver() {
     return receiver;

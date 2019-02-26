@@ -25,8 +25,8 @@ public class GitScmProvider extends GitScmProviderBefore77 {
 
   private final GitIgnoreCommand gitIgnoreCommand;
 
-  public GitScmProvider(JGitBlameCommand jgitBlameCommand, AnalysisWarningsWrapper analysisWarnings, GitIgnoreCommand gitIgnoreCommand) {
-    super(jgitBlameCommand, analysisWarnings);
+  public GitScmProvider(GitBlameCommand gitBlameCommand, AnalysisWarningsWrapper analysisWarnings, GitIgnoreCommand gitIgnoreCommand) {
+    super(gitBlameCommand, analysisWarnings);
     this.gitIgnoreCommand = gitIgnoreCommand;
   }
 

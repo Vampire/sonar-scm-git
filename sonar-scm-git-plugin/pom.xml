@@ -48,6 +48,7 @@
           <artifactId>commons-logging</artifactId>
         </exclusion>
       </exclusions>
+      <scope>test</scope>
     </dependency>
 
     <!-- unit tests -->

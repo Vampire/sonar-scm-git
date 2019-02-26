@@ -19,7 +19,6 @@
  */
 package org.sonarsource.scm.git;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import org.sonar.api.batch.scm.IgnoreCommand;
 import org.sonar.api.scanner.ScannerSide;
@@ -33,11 +32,7 @@ public class GitIgnoreCommand implements IgnoreCommand {
 
   @Override
   public void init(Path baseDir) {
-    try {
-      this.includedFilesRepository = new IncludedFilesRepository(baseDir);
-    } catch (IOException e) {
-      throw new IllegalStateException("I/O error while indexing ignored files.", e);
-    }
+    this.includedFilesRepository = new IncludedFilesRepository(baseDir);
   }
 
   @Override

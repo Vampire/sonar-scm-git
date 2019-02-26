@@ -27,13 +27,16 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import org.eclipse.jgit.api.Git;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.sonar.api.config.Configuration;
 import org.sonar.api.utils.log.LogTester;
 import org.sonar.api.utils.log.LoggerLevel;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.sonarsource.scm.git.Utils.javaUnzip;
 
 public class GitIgnoreCommandTest {
@@ -43,6 +46,11 @@ public class GitIgnoreCommandTest {
 
   @Rule
   public TemporaryFolder temp = new TemporaryFolder();
+
+  @BeforeClass
+  public static void determineGitExecutable() {
+    GitUtils.determineGitExecutable(mock(Configuration.class));
+  }
 
   @Test
   public void ignored_files_should_match_files_ignored_by_git() throws IOException {
