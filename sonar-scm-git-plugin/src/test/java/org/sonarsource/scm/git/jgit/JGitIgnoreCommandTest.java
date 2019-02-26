@@ -17,38 +17,14 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package org.sonarsource.scm.git;
+package org.sonarsource.scm.git.jgit;
 
-import java.nio.file.Path;
+import org.sonarsource.scm.git.AbstractGitIgnoreCommandTest;
 
-import org.sonar.api.batch.scm.IgnoreCommand;
-import org.sonarsource.scm.git.jgit.JGitIgnoreCommand;
-import org.sonarsource.scm.git.nativegit.NativeGitIgnoreCommand;
-
-public class GitIgnoreCommand implements IgnoreCommand {
-
-  private final IgnoreCommand delegate;
-
-  public GitIgnoreCommand() {
-    if (GitUtils.useJGit()) {
-      delegate = new JGitIgnoreCommand();
-    } else {
-      delegate = new NativeGitIgnoreCommand();
-    }
-  }
+public class JGitIgnoreCommandTest extends AbstractGitIgnoreCommandTest {
 
   @Override
-  public void init(Path baseDir) {
-    delegate.init(baseDir);
-  }
-
-  @Override
-  public boolean isIgnored(Path absolutePath) {
-    return delegate.isIgnored(absolutePath);
-  }
-
-  @Override
-  public void clean() {
-    delegate.clean();
+  protected JGitIgnoreCommand newGitIgnoreCommand() {
+    return new JGitIgnoreCommand();
   }
 }

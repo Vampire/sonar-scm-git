@@ -17,28 +17,16 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package org.sonarsource.scm.git;
+package org.sonarsource.scm.git.jgit;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import org.eclipse.jgit.lib.ObjectReader;
-import org.eclipse.jgit.lib.Repository;
+import org.sonar.api.scan.filesystem.PathResolver;
+import org.sonarsource.scm.git.AbstractGitBlameCommandTest;
+import org.sonarsource.scm.git.AnalysisWarningsWrapper;
 
-public class JGitUtils {
+public class JGitBlameCommandTest extends AbstractGitBlameCommandTest {
 
-  private JGitUtils() {
-  }
-
-  public static Repository buildRepository(Path basedir) {
-    try {
-      Repository repo = GitScmProvider.getVerifiedRepositoryBuilder(basedir).build();
-      try (ObjectReader objReader = repo.getObjectDatabase().newReader()) {
-        // SONARSCGIT-2 Force initialization of shallow commits to avoid later concurrent modification issue
-        objReader.getShallowCommits();
-        return repo;
-      }
-    } catch (IOException e) {
-      throw new IllegalStateException("Unable to open Git repository", e);
-    }
+  @Override
+  protected JGitBlameCommand newGitBlameCommand(PathResolver pathResolver, AnalysisWarningsWrapper analysisWarnings) {
+    return new JGitBlameCommand(pathResolver, analysisWarnings);
   }
 }

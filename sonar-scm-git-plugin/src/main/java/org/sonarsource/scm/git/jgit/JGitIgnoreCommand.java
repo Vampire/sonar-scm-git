@@ -17,38 +17,34 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package org.sonarsource.scm.git;
+package org.sonarsource.scm.git.jgit;
 
+import java.io.IOException;
 import java.nio.file.Path;
-
 import org.sonar.api.batch.scm.IgnoreCommand;
-import org.sonarsource.scm.git.jgit.JGitIgnoreCommand;
-import org.sonarsource.scm.git.nativegit.NativeGitIgnoreCommand;
 
-public class GitIgnoreCommand implements IgnoreCommand {
+import static java.util.Objects.requireNonNull;
 
-  private final IgnoreCommand delegate;
+public class JGitIgnoreCommand implements IgnoreCommand {
 
-  public GitIgnoreCommand() {
-    if (GitUtils.useJGit()) {
-      delegate = new JGitIgnoreCommand();
-    } else {
-      delegate = new NativeGitIgnoreCommand();
+  private JGitIncludedFilesRepository includedFilesRepository;
+
+  @Override
+  public void init(Path baseDir) {
+    try {
+      this.includedFilesRepository = new JGitIncludedFilesRepository(baseDir);
+    } catch (IOException e) {
+      throw new IllegalStateException("I/O error while indexing ignored files.", e);
     }
   }
 
   @Override
-  public void init(Path baseDir) {
-    delegate.init(baseDir);
-  }
-
-  @Override
   public boolean isIgnored(Path absolutePath) {
-    return delegate.isIgnored(absolutePath);
+    return !requireNonNull(includedFilesRepository, "Call init first").contains(absolutePath);
   }
 
   @Override
   public void clean() {
-    delegate.clean();
+    this.includedFilesRepository = null;
   }
 }

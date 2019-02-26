@@ -17,38 +17,28 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package org.sonarsource.scm.git;
+package org.sonarsource.scm.git.jgit;
 
+import java.io.IOException;
 import java.nio.file.Path;
+import org.eclipse.jgit.lib.ObjectReader;
+import org.eclipse.jgit.lib.Repository;
 
-import org.sonar.api.batch.scm.IgnoreCommand;
-import org.sonarsource.scm.git.jgit.JGitIgnoreCommand;
-import org.sonarsource.scm.git.nativegit.NativeGitIgnoreCommand;
+public class JGitUtils {
 
-public class GitIgnoreCommand implements IgnoreCommand {
+  private JGitUtils() {
+  }
 
-  private final IgnoreCommand delegate;
-
-  public GitIgnoreCommand() {
-    if (GitUtils.useJGit()) {
-      delegate = new JGitIgnoreCommand();
-    } else {
-      delegate = new NativeGitIgnoreCommand();
+  public static Repository buildRepository(Path basedir) {
+    try {
+      Repository repo = JGitScmProviderBefore77.getVerifiedRepositoryBuilder(basedir).build();
+      try (ObjectReader objReader = repo.getObjectDatabase().newReader()) {
+        // SONARSCGIT-2 Force initialization of shallow commits to avoid later concurrent modification issue
+        objReader.getShallowCommits();
+        return repo;
+      }
+    } catch (IOException e) {
+      throw new IllegalStateException("Unable to open Git repository", e);
     }
-  }
-
-  @Override
-  public void init(Path baseDir) {
-    delegate.init(baseDir);
-  }
-
-  @Override
-  public boolean isIgnored(Path absolutePath) {
-    return delegate.isIgnored(absolutePath);
-  }
-
-  @Override
-  public void clean() {
-    delegate.clean();
   }
 }

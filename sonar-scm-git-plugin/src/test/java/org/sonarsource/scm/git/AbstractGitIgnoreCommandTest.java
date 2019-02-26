@@ -30,13 +30,14 @@ import org.eclipse.jgit.api.Git;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.sonar.api.batch.scm.IgnoreCommand;
 import org.sonar.api.utils.log.LogTester;
 import org.sonar.api.utils.log.LoggerLevel;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.sonarsource.scm.git.Utils.javaUnzip;
 
-public class GitIgnoreCommandTest {
+public abstract class AbstractGitIgnoreCommandTest {
 
   @Rule
   public LogTester logTester = new LogTester();
@@ -50,7 +51,7 @@ public class GitIgnoreCommandTest {
     javaUnzip(new File("test-repos/ignore-git.zip"), projectDir.toFile());
 
     Path baseDir = projectDir.resolve("ignore-git");
-    GitIgnoreCommand underTest = new GitIgnoreCommand();
+    IgnoreCommand underTest = newGitIgnoreCommand();
     underTest.init(baseDir);
 
     assertThat(underTest.isIgnored(baseDir.resolve(".gitignore"))).isFalse();
@@ -75,7 +76,7 @@ public class GitIgnoreCommandTest {
 
     logTester.setLevel(LoggerLevel.DEBUG);
 
-    GitIgnoreCommand underTest = new GitIgnoreCommand();
+    IgnoreCommand underTest = newGitIgnoreCommand();
     underTest.init(projectDir);
 
     assertThat(underTest
@@ -101,7 +102,7 @@ public class GitIgnoreCommandTest {
 
     logTester.setLevel(LoggerLevel.DEBUG);
 
-    GitIgnoreCommand underTest = new GitIgnoreCommand();
+    IgnoreCommand underTest = newGitIgnoreCommand();
     // Define project baseDir as folder_0_0 so that folder_0_1 is excluded
     Path projectBasedir = repoRoot.resolve("folder_0_0");
     underTest.init(projectBasedir);
@@ -138,4 +139,5 @@ public class GitIgnoreCommandTest {
     }
   }
 
+  protected abstract IgnoreCommand newGitIgnoreCommand();
 }

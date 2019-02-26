@@ -25,7 +25,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-class ChangedLinesComputer {
+public class ChangedLinesComputer {
   private final Tracker tracker = new Tracker();
 
   private final OutputStream receiver = new OutputStream() {
@@ -42,9 +42,9 @@ class ChangedLinesComputer {
   };
 
   /**
-   * The OutputStream to pass to JGit's diff command.
+   * The OutputStream to pass to diff command.
    */
-  OutputStream receiver() {
+  public OutputStream receiver() {
     return receiver;
   }
 
@@ -77,7 +77,7 @@ class ChangedLinesComputer {
    * </pre>
    * See also: http://www.gnu.org/software/diffutils/manual/html_node/Example-Unified.html#Example-Unified
    */
-  Set<Integer> changedLines() {
+  public Set<Integer> changedLines() {
     return tracker.changedLines();
   }
 

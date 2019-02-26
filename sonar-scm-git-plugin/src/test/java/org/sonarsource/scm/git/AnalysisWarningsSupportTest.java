@@ -24,7 +24,6 @@ import org.sonar.api.SonarRuntime;
 import org.sonar.api.utils.Version;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 import static org.sonarsource.scm.git.AnalysisWarningsSupport.getAnalysisWarningsWrapper;
 

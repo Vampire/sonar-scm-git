@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package org.sonarsource.scm.git;
+package org.sonarsource.scm.git.jgit;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -37,6 +37,8 @@ import org.sonar.api.batch.scm.BlameLine;
 import org.sonar.api.scan.filesystem.PathResolver;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
+import org.sonarsource.scm.git.AnalysisWarningsWrapper;
+import org.sonarsource.scm.git.GitThreadFactory;
 
 public class JGitBlameCommand extends BlameCommand {
 

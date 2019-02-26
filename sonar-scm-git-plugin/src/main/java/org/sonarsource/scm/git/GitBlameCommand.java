@@ -19,36 +19,25 @@
  */
 package org.sonarsource.scm.git;
 
-import java.nio.file.Path;
+import org.sonar.api.batch.scm.BlameCommand;
+import org.sonar.api.scan.filesystem.PathResolver;
+import org.sonarsource.scm.git.jgit.JGitBlameCommand;
+import org.sonarsource.scm.git.nativegit.NativeGitBlameCommand;
 
-import org.sonar.api.batch.scm.IgnoreCommand;
-import org.sonarsource.scm.git.jgit.JGitIgnoreCommand;
-import org.sonarsource.scm.git.nativegit.NativeGitIgnoreCommand;
+public class GitBlameCommand extends BlameCommand {
 
-public class GitIgnoreCommand implements IgnoreCommand {
+  private final BlameCommand delegate;
 
-  private final IgnoreCommand delegate;
-
-  public GitIgnoreCommand() {
+  public GitBlameCommand(PathResolver pathResolver, AnalysisWarningsWrapper analysisWarnings) {
     if (GitUtils.useJGit()) {
-      delegate = new JGitIgnoreCommand();
+      delegate = new JGitBlameCommand(pathResolver, analysisWarnings);
     } else {
-      delegate = new NativeGitIgnoreCommand();
+      delegate = new NativeGitBlameCommand(pathResolver, analysisWarnings);
     }
   }
 
   @Override
-  public void init(Path baseDir) {
-    delegate.init(baseDir);
-  }
-
-  @Override
-  public boolean isIgnored(Path absolutePath) {
-    return delegate.isIgnored(absolutePath);
-  }
-
-  @Override
-  public void clean() {
-    delegate.clean();
+  public void blame(BlameInput input, BlameOutput output) {
+    delegate.blame(input, output);
   }
 }

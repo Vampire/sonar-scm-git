@@ -36,6 +36,7 @@ import org.sonar.api.batch.fs.InputFile;
 import org.sonar.api.batch.fs.internal.DefaultFileSystem;
 import org.sonar.api.batch.fs.internal.DefaultInputFile;
 import org.sonar.api.batch.fs.internal.TestInputFileBuilder;
+import org.sonar.api.batch.scm.BlameCommand;
 import org.sonar.api.batch.scm.BlameCommand.BlameInput;
 import org.sonar.api.batch.scm.BlameCommand.BlameOutput;
 import org.sonar.api.batch.scm.BlameLine;
@@ -56,7 +57,7 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 import static org.sonarsource.scm.git.Utils.javaUnzip;
 
-public class JGitBlameCommandTest {
+public abstract class AbstractGitBlameCommandTest {
 
   private static final String DUMMY_JAVA = "src/main/java/org/dummy/Dummy.java";
 
@@ -76,7 +77,7 @@ public class JGitBlameCommandTest {
     File projectDir = temp.newFolder();
     javaUnzip(new File("test-repos/dummy-git.zip"), projectDir);
 
-    JGitBlameCommand jGitBlameCommand = newJGitBlameCommand();
+    BlameCommand gitBlameCommand = newGitBlameCommand();
 
     File baseDir = new File(projectDir, "dummy-git");
     DefaultFileSystem fs = new DefaultFileSystem(baseDir);
@@ -88,7 +89,7 @@ public class JGitBlameCommandTest {
 
     BlameOutput blameResult = mock(BlameOutput.class);
     when(input.filesToBlame()).thenReturn(Arrays.<InputFile>asList(inputFile));
-    jGitBlameCommand.blame(input, blameResult);
+    gitBlameCommand.blame(input, blameResult);
 
     Date revisionDate1 = DateUtils.parseDateTime("2012-07-17T16:12:48+0200");
     String revision1 = "6b3aab35a3ea32c1636fee56f996e677653c48ea";
@@ -118,7 +119,7 @@ public class JGitBlameCommandTest {
     File projectDir = temp.newFolder();
     javaUnzip(new File("test-repos/dummy-git.zip"), projectDir);
 
-    JGitBlameCommand jGitBlameCommand = newJGitBlameCommand();
+    BlameCommand gitBlameCommand = newGitBlameCommand();
 
     File baseDir = new File(projectDir, "dummy-git");
 
@@ -136,7 +137,7 @@ public class JGitBlameCommandTest {
     thrown.expect(MessageException.class);
     thrown.expectMessage("Not inside a Git work tree: ");
 
-    jGitBlameCommand.blame(input, blameResult);
+    gitBlameCommand.blame(input, blameResult);
   }
 
   @Test
@@ -144,7 +145,7 @@ public class JGitBlameCommandTest {
     File projectDir = temp.newFolder();
     javaUnzip(new File("test-repos/dummy-git-nested.zip"), projectDir);
 
-    JGitBlameCommand jGitBlameCommand = newJGitBlameCommand();
+    BlameCommand gitBlameCommand = newGitBlameCommand();
 
     File baseDir = new File(projectDir, "dummy-git-nested/dummy-project");
     DefaultFileSystem fs = new DefaultFileSystem(baseDir);
@@ -156,7 +157,7 @@ public class JGitBlameCommandTest {
 
     BlameOutput blameResult = mock(BlameOutput.class);
     when(input.filesToBlame()).thenReturn(Arrays.<InputFile>asList(inputFile));
-    jGitBlameCommand.blame(input, blameResult);
+    gitBlameCommand.blame(input, blameResult);
 
     Date revisionDate = DateUtils.parseDateTime("2012-07-17T16:12:48+0200");
     String revision = "6b3aab35a3ea32c1636fee56f996e677653c48ea";
@@ -196,7 +197,7 @@ public class JGitBlameCommandTest {
     File projectDir = temp.newFolder();
     javaUnzip(new File("test-repos/dummy-git.zip"), projectDir);
 
-    JGitBlameCommand jGitBlameCommand = newJGitBlameCommand();
+    BlameCommand gitBlameCommand = newGitBlameCommand();
 
     File baseDir = new File(projectDir, "dummy-git");
     DefaultFileSystem fs = new DefaultFileSystem(baseDir);
@@ -211,7 +212,7 @@ public class JGitBlameCommandTest {
     BlameOutput blameResult = mock(BlameOutput.class);
 
     when(input.filesToBlame()).thenReturn(Arrays.<InputFile>asList(inputFile));
-    jGitBlameCommand.blame(input, blameResult);
+    gitBlameCommand.blame(input, blameResult);
   }
 
   @Test
@@ -219,7 +220,7 @@ public class JGitBlameCommandTest {
     File projectDir = temp.newFolder();
     javaUnzip(new File("test-repos/dummy-git.zip"), projectDir);
 
-    JGitBlameCommand jGitBlameCommand = newJGitBlameCommand();
+    BlameCommand gitBlameCommand = newGitBlameCommand();
 
     File baseDir = new File(projectDir, "dummy-git");
     DefaultFileSystem fs = new DefaultFileSystem(baseDir);
@@ -237,7 +238,7 @@ public class JGitBlameCommandTest {
     BlameOutput blameResult = mock(BlameOutput.class);
 
     when(input.filesToBlame()).thenReturn(Arrays.<InputFile>asList(inputFile, inputFile2));
-    jGitBlameCommand.blame(input, blameResult);
+    gitBlameCommand.blame(input, blameResult);
   }
 
   @Test
@@ -246,7 +247,7 @@ public class JGitBlameCommandTest {
     File projectDir = temp.newFolder();
     javaUnzip(new File("test-repos/dummy-git.zip"), projectDir);
 
-    JGitBlameCommand jGitBlameCommand = newJGitBlameCommand();
+    BlameCommand gitBlameCommand = newGitBlameCommand();
 
     File baseDir = new File(projectDir, "dummy-git");
     DefaultFileSystem fs = new DefaultFileSystem(baseDir);
@@ -268,7 +269,7 @@ public class JGitBlameCommandTest {
     BlameOutput blameResult = mock(BlameOutput.class);
 
     when(input.filesToBlame()).thenReturn(Arrays.<InputFile>asList(inputFile, inputFile2));
-    jGitBlameCommand.blame(input, blameResult);
+    gitBlameCommand.blame(input, blameResult);
   }
 
   @Test
@@ -287,9 +288,9 @@ public class JGitBlameCommandTest {
     // register warning with default wrapper
     AnalysisWarnings analysisWarnings = mock(AnalysisWarnings.class);
     AnalysisWarningsWrapper analysisWarningsWrapper = new DefaultAnalysisWarningsWrapper(analysisWarnings);
-    JGitBlameCommand jGitBlameCommand = new JGitBlameCommand(new PathResolver(), analysisWarningsWrapper);
+    BlameCommand gitBlameCommand = newGitBlameCommand(new PathResolver(), analysisWarningsWrapper);
     BlameOutput output = mock(BlameOutput.class);
-    jGitBlameCommand.blame(input, output);
+    gitBlameCommand.blame(input, output);
 
     assertThat(logTester.logs()).first()
       .matches(s -> s.contains("Shallow clone detected, no blame information will be provided."));
@@ -298,14 +299,15 @@ public class JGitBlameCommandTest {
     verify(analysisWarnings).addUnique(startsWith("Shallow clone detected"));
 
     // do not register warning with noop wrapper
-    jGitBlameCommand = new JGitBlameCommand(new PathResolver(), new NoOpAnalysisWarningsWrapper());
-    jGitBlameCommand.blame(input, output);
+    gitBlameCommand = newGitBlameCommand(new PathResolver(), new NoOpAnalysisWarningsWrapper());
+    gitBlameCommand.blame(input, output);
 
     verifyNoMoreInteractions(analysisWarnings);
   }
 
-  private JGitBlameCommand newJGitBlameCommand() {
-    return new JGitBlameCommand(new PathResolver(), mock(AnalysisWarningsWrapper.class));
+  private BlameCommand newGitBlameCommand() {
+    return newGitBlameCommand(new PathResolver(), mock(AnalysisWarningsWrapper.class));
   }
 
+  protected abstract BlameCommand newGitBlameCommand(PathResolver pathResolver, AnalysisWarningsWrapper analysisWarnings);
 }

@@ -19,20 +19,67 @@
  */
 package org.sonarsource.scm.git;
 
-import java.util.Objects;
+import org.sonar.api.batch.scm.BlameCommand;
+import org.sonar.api.batch.scm.IgnoreCommand;
+import org.sonar.api.batch.scm.ScmProvider;
+import org.sonarsource.scm.git.jgit.JGitScmProvider;
+import org.sonarsource.scm.git.nativegit.NativeGitScmProvider;
 
-public class GitScmProvider extends GitScmProviderBefore77 {
+import java.io.File;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.Set;
 
-  private final GitIgnoreCommand gitIgnoreCommand;
+public class GitScmProvider extends ScmProvider {
 
-  public GitScmProvider(JGitBlameCommand jgitBlameCommand, AnalysisWarningsWrapper analysisWarnings, GitIgnoreCommand gitIgnoreCommand) {
-    super(jgitBlameCommand, analysisWarnings);
-    this.gitIgnoreCommand = gitIgnoreCommand;
+  private final ScmProvider delegate;
+
+  public GitScmProvider(GitBlameCommand gitBlameCommand, AnalysisWarningsWrapper analysisWarnings, GitIgnoreCommand gitIgnoreCommand) {
+    if (GitUtils.useJGit()) {
+      delegate = new JGitScmProvider(gitBlameCommand, analysisWarnings, gitIgnoreCommand);
+    } else {
+      delegate = new NativeGitScmProvider(gitBlameCommand, analysisWarnings, gitIgnoreCommand);
+    }
   }
 
   @Override
-  public GitIgnoreCommand ignoreCommand() {
-    return Objects.requireNonNull(gitIgnoreCommand, "This method should never be called before SQ 7.6");
+  public String key() {
+    return delegate.key();
+  }
+
+  @Override
+  public boolean supports(File baseDir) {
+    return delegate.supports(baseDir);
+  }
+
+  @Override
+  public BlameCommand blameCommand() {
+    return delegate.blameCommand();
+  }
+
+  @Override
+  public Set<Path> branchChangedFiles(String targetBranchName, Path rootBaseDir) {
+    return delegate.branchChangedFiles(targetBranchName, rootBaseDir);
+  }
+
+  @Override
+  public Map<Path, Set<Integer>> branchChangedLines(String targetBranchName, Path projectBaseDir, Set<Path> changedFiles) {
+    return delegate.branchChangedLines(targetBranchName, projectBaseDir, changedFiles);
+  }
+
+  @Override
+  public Path relativePathFromScmRoot(Path path) {
+    return delegate.relativePathFromScmRoot(path);
+  }
+
+  @Override
+  public String revisionId(Path path) {
+    return delegate.revisionId(path);
+  }
+
+  @Override
+  public IgnoreCommand ignoreCommand() {
+    return delegate.ignoreCommand();
   }
 
 }

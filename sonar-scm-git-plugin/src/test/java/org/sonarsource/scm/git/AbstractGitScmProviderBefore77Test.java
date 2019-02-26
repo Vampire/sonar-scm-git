@@ -32,38 +32,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import org.eclipse.jgit.api.DiffCommand;
+
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
-import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.RefDatabase;
 import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevWalk;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+import org.sonar.api.batch.scm.ScmProvider;
 import org.sonar.api.internal.google.common.collect.ImmutableMap;
 import org.sonar.api.internal.google.common.collect.ImmutableSet;
-import org.sonar.api.scan.filesystem.PathResolver;
 import org.sonar.api.utils.MessageException;
 
 import static java.util.Collections.emptySet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.data.MapEntry.entry;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
 import static org.sonarsource.scm.git.Utils.javaUnzip;
 
-public class GitScmProviderBefore77Test {
+public abstract class AbstractGitScmProviderBefore77Test {
 
   // Sample content for unified diffs
   // http://www.gnu.org/software/diffutils/manual/html_node/Example-Unified.html#Example-Unified
@@ -101,9 +93,9 @@ public class GitScmProviderBefore77Test {
 
   private static final Random random = new Random();
 
-  private Path worktree;
+  protected Path worktree;
   private Git git;
-  private final AnalysisWarningsWrapper analysisWarnings = mock(AnalysisWarningsWrapper.class);
+  protected final AnalysisWarningsWrapper analysisWarnings = mock(AnalysisWarningsWrapper.class);
 
   @Before
   public void before() throws IOException, GitAPIException {
@@ -118,30 +110,26 @@ public class GitScmProviderBefore77Test {
 
   @Test
   public void sanityCheck() {
-    assertThat(newGitScmProvider().key()).isEqualTo("git");
+    assertThat(newGitScmProviderBefore77().key()).isEqualTo("git");
   }
 
   @Test
   public void returnImplem() {
-    JGitBlameCommand jblameCommand = new JGitBlameCommand(new PathResolver(), analysisWarnings);
-    GitScmProviderBefore77 gitScmProvider = new GitScmProviderBefore77(jblameCommand, analysisWarnings);
+    GitBlameCommand gitBlameCommand = mock(GitBlameCommand.class);
+    ScmProvider gitScmProvider = newGitScmProviderBefore77(gitBlameCommand, analysisWarnings);
 
-    assertThat(gitScmProvider.blameCommand()).isEqualTo(jblameCommand);
+    assertThat(gitScmProvider.blameCommand()).isEqualTo(gitBlameCommand);
   }
 
   @Test
   public void testAutodetection() throws IOException {
     File baseDirEmpty = temp.newFolder();
-    assertThat(newGitScmProvider().supports(baseDirEmpty)).isFalse();
+    assertThat(newGitScmProviderBefore77().supports(baseDirEmpty)).isFalse();
 
     File projectDir = temp.newFolder();
     javaUnzip(new File("test-repos/dummy-git.zip"), projectDir);
     File baseDir = new File(projectDir, "dummy-git");
-    assertThat(newScmProvider().supports(baseDir)).isTrue();
-  }
-
-  private static JGitBlameCommand mockCommand() {
-    return mock(JGitBlameCommand.class);
+    assertThat(newGitScmProviderBefore77().supports(baseDir)).isTrue();
   }
 
   @Test
@@ -160,7 +148,7 @@ public class GitScmProviderBefore77Test {
     appendToAndCommitFile("file-m1.xoo");
     deleteAndCommitFile("file-m2.xoo");
 
-    assertThat(newScmProvider().branchChangedFiles("master", worktree))
+    assertThat(newGitScmProviderBefore77().branchChangedFiles("master", worktree))
       .containsExactlyInAnyOrder(
         worktree.resolve("file-b1.xoo"),
         worktree.resolve("file-m1.xoo"));
@@ -191,7 +179,7 @@ public class GitScmProviderBefore77Test {
     createAndCommitFile("file-m5.xoo");
     deleteAndCommitFile("file-m5.xoo");
 
-    Set<Path> changedFiles = newScmProvider().branchChangedFiles("master", worktree);
+    Set<Path> changedFiles = newGitScmProviderBefore77().branchChangedFiles("master", worktree);
     assertThat(changedFiles)
       .containsExactlyInAnyOrder(
         worktree.resolve("file-m1.xoo"),
@@ -208,14 +196,14 @@ public class GitScmProviderBefore77Test {
     // a file that should not yield any results
     changedFiles.add(worktree.resolve("nonexistent"));
 
-    assertThat(newScmProvider().branchChangedLines("master", worktree, changedFiles))
+    assertThat(newGitScmProviderBefore77().branchChangedLines("master", worktree, changedFiles))
       .isEqualTo(
         ImmutableMap.of(
           worktree.resolve("lao.txt"), ImmutableSet.of(2, 3, 11, 12, 13),
           worktree.resolve("file-m1.xoo"), ImmutableSet.of(4),
           worktree.resolve("file-b2.xoo"), ImmutableSet.of(1, 2, 3)));
 
-    assertThat(newScmProvider().branchChangedLines("master", worktree, Collections.singleton(worktree.resolve("nonexistent"))))
+    assertThat(newGitScmProviderBefore77().branchChangedLines("master", worktree, Collections.singleton(worktree.resolve("nonexistent"))))
       .isEmpty();
   }
 
@@ -233,7 +221,7 @@ public class GitScmProviderBefore77Test {
     addLineToFile(fileName, 1);
 
     Path filePath = worktree.resolve(fileName);
-    Map<Path, Set<Integer>> changedLines = newScmProvider().branchChangedLines("master", worktree, Collections.singleton(filePath));
+    Map<Path, Set<Integer>> changedLines = newGitScmProviderBefore77().branchChangedLines("master", worktree, Collections.singleton(filePath));
 
     // both lines appear correctly
     assertThat(changedLines).containsExactly(entry(filePath, new HashSet<>(Arrays.asList(1, 4))));
@@ -255,7 +243,7 @@ public class GitScmProviderBefore77Test {
     addLineToFile(fileName, 1);
 
     Path filePath = worktree.resolve(fileName);
-    Map<Path, Set<Integer>> changedLines = newScmProvider().branchChangedLines("master",
+    Map<Path, Set<Integer>> changedLines = newGitScmProviderBefore77().branchChangedLines("master",
       worktree.resolve("project1"), Collections.singleton(filePath));
 
     // both lines appear correctly
@@ -270,7 +258,7 @@ public class GitScmProviderBefore77Test {
     Path projectDir = worktree.resolve("project");
     Files.createDirectory(projectDir);
     createAndCommitFile("project/file-b1");
-    assertThat(newScmProvider().branchChangedFiles("master", projectDir))
+    assertThat(newGitScmProviderBefore77().branchChangedFiles("master", projectDir))
       .containsOnly(projectDir.resolve("file-b1"));
   }
 
@@ -286,148 +274,38 @@ public class GitScmProviderBefore77Test {
       .setDirectory(worktree2.toFile())
       .call();
 
-    assertThat(newScmProvider().branchChangedFiles("master", worktree2))
+    assertThat(newGitScmProviderBefore77().branchChangedFiles("master", worktree2))
       .containsOnly(worktree2.resolve("file-b1"));
     verifyZeroInteractions(analysisWarnings);
   }
 
   @Test
   public void branchChangedFiles_should_return_null_when_branch_nonexistent() {
-    assertThat(newScmProvider().branchChangedFiles("nonexistent", worktree)).isNull();
+    assertThat(newGitScmProviderBefore77().branchChangedFiles("nonexistent", worktree)).isNull();
   }
 
   @Test
   public void branchChangedFiles_should_throw_when_repo_nonexistent() throws IOException {
     thrown.expect(MessageException.class);
     thrown.expectMessage("Not inside a Git work tree: ");
-    newScmProvider().branchChangedFiles("master", temp.newFolder().toPath());
+    newGitScmProviderBefore77().branchChangedFiles("master", temp.newFolder().toPath());
   }
 
   @Test
   public void branchChangedFiles_should_throw_when_dir_nonexistent() {
     thrown.expect(MessageException.class);
     thrown.expectMessage("Not inside a Git work tree: ");
-    newScmProvider().branchChangedFiles("master", temp.getRoot().toPath().resolve("nonexistent"));
-  }
-
-  @Test
-  public void branchChangedFiles_should_return_null_on_io_errors_of_repo_builder() {
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      Repository buildRepo(Path basedir) throws IOException {
-        throw new IOException();
-      }
-    };
-    assertThat(provider.branchChangedFiles("branch", worktree)).isNull();
-    verifyZeroInteractions(analysisWarnings);
-  }
-
-  @Test
-  public void branchChangedFiles_should_return_null_if_repo_exactref_is_null() throws IOException {
-    Repository repository = mock(Repository.class);
-    RefDatabase refDatabase = mock(RefDatabase.class);
-    when(repository.getRefDatabase()).thenReturn(refDatabase);
-    when(refDatabase.getRef("branch")).thenReturn(null);
-
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      Repository buildRepo(Path basedir) throws IOException {
-        return repository;
-      }
-    };
-    assertThat(provider.branchChangedFiles("branch", worktree)).isNull();
-
-    String warning = "Could not find ref 'branch' in refs/heads or refs/remotes/origin."
-      + " You may see unexpected issues and changes. Please make sure to fetch this ref before pull request analysis.";
-    verify(analysisWarnings).addUnique(warning);
-  }
-
-  @Test
-  public void branchChangedFiles_should_return_null_on_io_errors_of_RevWalk() throws IOException {
-    RevWalk walk = mock(RevWalk.class);
-    when(walk.parseCommit(any())).thenThrow(new IOException());
-
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      RevWalk newRevWalk(Repository repo) {
-        return walk;
-      }
-    };
-    assertThat(provider.branchChangedFiles("branch", worktree)).isNull();
-  }
-
-  @Test
-  public void branchChangedFiles_should_return_null_on_git_api_errors() throws GitAPIException {
-    DiffCommand diffCommand = mock(DiffCommand.class);
-    when(diffCommand.setShowNameAndStatusOnly(anyBoolean())).thenReturn(diffCommand);
-    when(diffCommand.setOldTree(any())).thenReturn(diffCommand);
-    when(diffCommand.setNewTree(any())).thenReturn(diffCommand);
-    when(diffCommand.call()).thenThrow(mock(GitAPIException.class));
-
-    Git git = mock(Git.class);
-    when(git.diff()).thenReturn(diffCommand);
-
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      Git newGit(Repository repo) {
-        return git;
-      }
-    };
-    assertThat(provider.branchChangedFiles("master", worktree)).isNull();
-    verify(diffCommand).call();
+    newGitScmProviderBefore77().branchChangedFiles("master", temp.getRoot().toPath().resolve("nonexistent"));
   }
 
   @Test
   public void branchChangedLines_returns_null_when_branch_doesnt_exist() {
-    assertThat(newScmProvider().branchChangedLines("nonexistent", worktree, emptySet())).isNull();
-  }
-
-  @Test
-  public void branchChangedLines_omits_files_with_git_api_errors() throws GitAPIException {
-    DiffEntry diffEntry = mock(DiffEntry.class);
-    when(diffEntry.getChangeType()).thenReturn(DiffEntry.ChangeType.MODIFY);
-
-    DiffCommand diffCommand = mock(DiffCommand.class);
-    when(diffCommand.setOutputStream(any())).thenReturn(diffCommand);
-    when(diffCommand.setOldTree(any())).thenReturn(diffCommand);
-    when(diffCommand.setPathFilter(any())).thenReturn(diffCommand);
-    when(diffCommand.call())
-      .thenReturn(Collections.singletonList(diffEntry))
-      .thenThrow(mock(GitAPIException.class));
-
-    Git git = mock(Git.class);
-    when(git.diff()).thenReturn(diffCommand);
-
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      Git newGit(Repository repo) {
-        return git;
-      }
-    };
-    assertThat(provider.branchChangedLines("master", worktree,
-      ImmutableSet.of(worktree.resolve("foo"), worktree.resolve("bar"))))
-        .isEqualTo(ImmutableMap.of(worktree.resolve("foo"), emptySet()));
-    verify(diffCommand, times(2)).call();
-  }
-
-  @Test
-  public void branchChangedLines_returns_null_on_io_errors_of_repo_builder() {
-    GitScmProviderBefore77 provider = new GitScmProviderBefore77(mockCommand(), analysisWarnings) {
-      @Override
-      Repository buildRepo(Path basedir) throws IOException {
-        throw new IOException();
-      }
-    };
-    assertThat(provider.branchChangedLines("branch", worktree, emptySet())).isNull();
+    assertThat(newGitScmProviderBefore77().branchChangedLines("nonexistent", worktree, emptySet())).isNull();
   }
 
   @Test
   public void relativePathFromScmRoot_should_return_dot_project_root() {
-    assertThat(newGitScmProvider().relativePathFromScmRoot(worktree)).isEqualTo(Paths.get(""));
-  }
-
-  private GitScmProviderBefore77 newGitScmProvider() {
-    return new GitScmProviderBefore77(mock(JGitBlameCommand.class), analysisWarnings);
+    assertThat(newGitScmProviderBefore77().relativePathFromScmRoot(worktree)).isEqualTo(Paths.get(""));
   }
 
   @Test
@@ -435,7 +313,7 @@ public class GitScmProviderBefore77Test {
     Path filename = Paths.get("somefile.xoo");
     Path path = worktree.resolve(filename);
     Files.createFile(path);
-    assertThat(newGitScmProvider().relativePathFromScmRoot(path)).isEqualTo(filename);
+    assertThat(newGitScmProviderBefore77().relativePathFromScmRoot(path)).isEqualTo(filename);
   }
 
   @Test
@@ -444,7 +322,7 @@ public class GitScmProviderBefore77Test {
     Path path = worktree.resolve(relpath);
     Files.createDirectories(path.getParent());
     Files.createFile(path);
-    assertThat(newGitScmProvider().relativePathFromScmRoot(path)).isEqualTo(relpath);
+    assertThat(newGitScmProviderBefore77().relativePathFromScmRoot(path)).isEqualTo(relpath);
   }
 
   @Test
@@ -452,7 +330,7 @@ public class GitScmProviderBefore77Test {
     Path projectDir = worktree.resolve("project");
     Files.createDirectory(projectDir);
 
-    GitScmProviderBefore77 provider = newGitScmProvider();
+    ScmProvider provider = newGitScmProviderBefore77();
 
     String sha1before = provider.revisionId(projectDir);
     assertThat(sha1before).hasSize(40);
@@ -519,7 +397,13 @@ public class GitScmProviderBefore77Test {
     git.commit().setAuthor("joe", "joe@example.com").setMessage(relativePath).call();
   }
 
-  private GitScmProviderBefore77 newScmProvider() {
-    return new GitScmProviderBefore77(mockCommand(), analysisWarnings);
+  private ScmProvider newGitScmProviderBefore77() {
+    return newGitScmProviderBefore77(mockCommand(), analysisWarnings);
   }
+
+  protected static GitBlameCommand mockCommand() {
+    return mock(GitBlameCommand.class);
+  }
+
+  protected abstract ScmProvider newGitScmProviderBefore77(GitBlameCommand gitBlameCommand, AnalysisWarningsWrapper analysisWarnings);
 }

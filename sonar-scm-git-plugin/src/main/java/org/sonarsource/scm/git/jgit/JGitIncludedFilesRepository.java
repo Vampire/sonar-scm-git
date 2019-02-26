@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package org.sonarsource.scm.git;
+package org.sonarsource.scm.git.jgit;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -31,12 +31,12 @@ import org.eclipse.jgit.treewalk.filter.PathFilterGroup;
 import org.sonar.api.utils.log.Logger;
 import org.sonar.api.utils.log.Loggers;
 
-public class IncludedFilesRepository {
+public class JGitIncludedFilesRepository {
 
-  private static final Logger LOG = Loggers.get(IncludedFilesRepository.class);
+  private static final Logger LOG = Loggers.get(JGitIncludedFilesRepository.class);
   private final Set<Path> includedFiles = new HashSet<>();
 
-  public IncludedFilesRepository(Path baseDir) throws IOException {
+  public JGitIncludedFilesRepository(Path baseDir) throws IOException {
     indexFiles(baseDir);
     LOG.debug("{} non excluded files in this Git repository", includedFiles.size());
   }

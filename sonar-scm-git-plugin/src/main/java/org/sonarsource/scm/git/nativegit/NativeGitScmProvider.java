@@ -17,38 +17,27 @@
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
-package org.sonarsource.scm.git;
-
-import java.nio.file.Path;
+package org.sonarsource.scm.git.nativegit;
 
 import org.sonar.api.batch.scm.IgnoreCommand;
-import org.sonarsource.scm.git.jgit.JGitIgnoreCommand;
-import org.sonarsource.scm.git.nativegit.NativeGitIgnoreCommand;
+import org.sonarsource.scm.git.AnalysisWarningsWrapper;
+import org.sonarsource.scm.git.GitBlameCommand;
+import org.sonarsource.scm.git.GitIgnoreCommand;
 
-public class GitIgnoreCommand implements IgnoreCommand {
+import java.util.Objects;
 
-  private final IgnoreCommand delegate;
+public class NativeGitScmProvider extends NativeGitScmProviderBefore77 {
 
-  public GitIgnoreCommand() {
-    if (GitUtils.useJGit()) {
-      delegate = new JGitIgnoreCommand();
-    } else {
-      delegate = new NativeGitIgnoreCommand();
-    }
+  private final GitIgnoreCommand gitIgnoreCommand;
+
+  public NativeGitScmProvider(GitBlameCommand gitBlameCommand, AnalysisWarningsWrapper analysisWarnings, GitIgnoreCommand gitIgnoreCommand) {
+    super(gitBlameCommand, analysisWarnings);
+    this.gitIgnoreCommand = gitIgnoreCommand;
   }
 
   @Override
-  public void init(Path baseDir) {
-    delegate.init(baseDir);
+  public IgnoreCommand ignoreCommand() {
+    return Objects.requireNonNull(gitIgnoreCommand, "This method should never be called before SQ 7.6");
   }
 
-  @Override
-  public boolean isIgnored(Path absolutePath) {
-    return delegate.isIgnored(absolutePath);
-  }
-
-  @Override
-  public void clean() {
-    delegate.clean();
-  }
 }
